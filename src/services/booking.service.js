@@ -145,7 +145,9 @@ const bookingService = {
       throw new BadRequestException("So khach vuot qua suc chua phong");
     }
 
-    const status = allStatus.includes(data.status) ? data.status : "pending";
+    const status = allStatus.includes(data.status)
+      ? data.status
+      : "pending_payment";
 
     const booking = await bookingModel.create({
       user_id,
