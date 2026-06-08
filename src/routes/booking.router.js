@@ -11,4 +11,5 @@ bookingRouter.delete("/delete/:bookingId", bookingController.delete);
 bookingRouter.patch("/:bookingId/status", bookingController.updateStatus);
 bookingRouter.post("/payos/create/:id", bookingController.createPayOSPayment);
 bookingRouter.post("/payos/webhook", bookingController.payOSWebhook);
+bookingRouter.get("/payos/status/:id", bookingController.syncPayOSPaymentStatus);
 module.exports = bookingRouter;

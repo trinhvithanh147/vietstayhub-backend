@@ -2,6 +2,7 @@ const { BadRequestException } = require("../helpers/error.helper");
 const bookingModel = require("../models/bookings.model");
 const roomsModel = require("../models/rooms.model");
 const payOS = require("../config/payos.config");
+const { CLIENT_URL } = require("../constants/app.constant");
 const activeStatus = ["confirmed"];
 const allStatus = ["pending_payment", "confirmed", "completed", "cancelled"];
 
@@ -66,6 +67,37 @@ const validateDateRange = (checkIn, checkOut) => {
   if (checkOut <= checkIn) {
     throw new BadRequestException("Ngày check_out phải lớn hơn ngày check_in");
   }
+};
+
+const getClientUrl = () =>
+  (process.env.FRONTEND_URL || CLIENT_URL || "http://localhost:5173").replace(
+    /\/$/,
+    "",
+  );
+
+const applyPaymentStatus = async (booking, payOSStatus) => {
+  if (payOSStatus === "PAID") {
+    booking.payment_status = "paid";
+    booking.status = "confirmed";
+    booking.paid_at = booking.paid_at || new Date();
+    await booking.save();
+    return booking;
+  }
+
+  if (payOSStatus === "CANCELLED") {
+    booking.payment_status = "cancelled";
+    booking.status = "cancelled";
+    await booking.save();
+    return booking;
+  }
+
+  if (payOSStatus === "FAILED" || payOSStatus === "EXPIRED") {
+    booking.payment_status = "failed";
+    await booking.save();
+    return booking;
+  }
+
+  return booking;
 };
 
 const bookingService = {
@@ -318,6 +350,11 @@ const bookingService = {
 
     const orderCode = Number(`${Date.now()}`.slice(-9));
     const amount = Number(booking.total_price);
+    const clientUrl = getClientUrl();
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException("So tien thanh toan khong hop le");
+    }
 
     const paymentData = {
       orderCode,
@@ -330,8 +367,8 @@ const bookingService = {
           price: amount,
         },
       ],
-      returnUrl: `${process.env.FRONTEND_URL}/payment-success?bookingId=${booking._id}`,
-      cancelUrl: `${process.env.FRONTEND_URL}/payment-cancel?bookingId=${booking._id}`,
+      returnUrl: `${clientUrl}/payment-success?bookingId=${booking._id}`,
+      cancelUrl: `${clientUrl}/payment-cancel?bookingId=${booking._id}`,
     };
 
     const paymentLink = await payOS.paymentRequests.create(paymentData);
@@ -349,8 +386,26 @@ const bookingService = {
       checkoutUrl: paymentLink.checkoutUrl,
     };
   },
+  syncPayOSPaymentStatus: async (bookingId) => {
+    const booking = await bookingModel.findById(bookingId);
+
+    if (!booking) {
+      throw new BadRequestException("Booking khong ton tai");
+    }
+
+    if (!booking.order_code) {
+      throw new BadRequestException("Booking chua co ma thanh toan");
+    }
+
+    if (booking.payment_status === "paid") {
+      return booking;
+    }
+
+    const paymentLink = await payOS.paymentRequests.get(booking.order_code);
+    return await applyPaymentStatus(booking, paymentLink.status);
+  },
   handlePayOSWebhook: async (webhookBody) => {
-    const webhookData = payOS.webhooks.verify(webhookBody);
+    const webhookData = await payOS.webhooks.verify(webhookBody);
 
     const orderCode = webhookData.orderCode;
     const booking = await bookingModel.findOne({ order_code: orderCode });
@@ -359,17 +414,10 @@ const bookingService = {
       throw new BadRequestException("Không tìm thấy booking từ orderCode");
     }
 
-    if (booking.payment_status === "paid") {
-      return booking;
-    }
-
-    booking.payment_status = "paid";
-    booking.status = "confirmed";
-    booking.paid_at = new Date();
-
-    await booking.save();
-
-    return booking;
+    return await applyPaymentStatus(
+      booking,
+      webhookData.code === "00" ? "PAID" : "FAILED",
+    );
   },
   delete: async (bookingId) => {
     const booking = await bookingModel.findById(bookingId);

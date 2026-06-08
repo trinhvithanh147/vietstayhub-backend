@@ -78,6 +78,22 @@ const bookingController = {
       });
     }
   },
+  syncPayOSPaymentStatus: async (req, res, next) => {
+    const bookingId = req.params.id;
+
+    try {
+      const data = await bookingService.syncPayOSPaymentStatus(bookingId);
+      const response = responseSuccess(
+        data,
+        "Cap nhat trang thai thanh toan thanh cong",
+        200,
+      );
+
+      res.status(response.code).json(response);
+    } catch (err) {
+      next(err);
+    }
+  },
   delete: async (req, res, next) => {
     const bookingId = req.params.bookingId;
     try {
