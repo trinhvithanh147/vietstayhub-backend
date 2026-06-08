@@ -3,7 +3,7 @@ const bookingModel = require("../models/bookings.model");
 const roomsModel = require("../models/rooms.model");
 const payOS = require("../config/payos.config");
 const activeStatus = ["confirmed"];
-const allStatus = ["pending", "confirmed", "completed", "cancelled"];
+const allStatus = ["pending_payment", "confirmed", "completed", "cancelled"];
 
 const parseDate = (value, label) => {
   const date = new Date(value);

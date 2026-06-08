@@ -4,7 +4,7 @@ const userService = require("../services/users.service");
 const buildRefreshCookieOptions = () => ({
   httpOnly: true,
   sameSite: "lax",
-  secure: false,
+  secure: process.env.NODE_ENV === "production",
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: "/",
 });
