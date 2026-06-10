@@ -34,8 +34,8 @@ const sendPasswordResetCodeEmail = async ({ to, code }) => {
     subject: "Mã xác thực đặt lại mật khẩu",
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2f46">
-        <h2 style="margin-bottom:12px;color:#003b95">Khôi phục mật khẩu Booking</h2>
-        <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản Booking.</p>
+        <h2 style="margin-bottom:12px;color:#003b95">Khôi phục mật khẩu VietStayHub</h2>
+        <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản VietStayHub.</p>
         <p>Mã xác thực của bạn là:</p>
         <div style="display:inline-block;margin:12px 0;padding:12px 20px;border-radius:12px;background:#eef4ff;font-size:28px;font-weight:700;letter-spacing:6px;color:#003b95">
           ${code}
